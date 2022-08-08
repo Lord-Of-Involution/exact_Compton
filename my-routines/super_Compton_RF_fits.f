@@ -37,7 +37,7 @@ c
       integer itrans, nmaxp, mgi, iz, np
       real*8 theta(itrans), wp(nmaxp), df(nmaxp), skn(nmaxp,itrans)
       real*8 smit(mgi), agt(mgi)
-      real*8 check1(nmaxp), limit, pmin
+      real*8 check1(nmaxp), limit, pmin,pmax
       real*8 prob(nmaxp,nmaxp), srf
       real*8 mec2, ecen, isp, ikbol, temp
       integer jj, kk, point(nmaxp), indices(nmaxp,nmaxp)
@@ -46,7 +46,7 @@ c
 ! Added by Gullo
 c$$$  double precision, allocatable :: srf_arr(:)
       integer          :: unit, status
-      double precision :: srf_arr(nmaxp)
+      double precision :: srf_arr(nmaxp), ind_arr(nmaxp)
 c Initialize status
       status=0
 c
@@ -73,7 +73,7 @@ c     Check1 is to ensure photon number is conserved in scatterings
 !append and other extension (3rd) to store the SRF
 !IMPORTANT: this routine leaves the fits file opened      
       call add_HDU(itrans, nmaxp, filename, unit)
-      
+      call add_HDU_2(itrans, nmaxp, filename, unit)
       do 1001 iz = 1, itrans
          do kk=1,nmaxp
             point(kk)=0
@@ -90,20 +90,30 @@ c
 c           Approx energy of the probability maximum
             ecen = wp(np)
 c           Probability at ecen
+            pmax=0.d0
+            do kk=1, nmaxp
+                  call probab(temp,wp(kk)/mec2,ecen/mec2,mgi,smit,agt,
+     1                  prob(kk,np))
+                  if(prob(kk,np) > pmax) then
+                     pmax = prob(kk,np)
+                  endif
+            enddo
             call probab(temp,ecen/mec2,ecen/mec2,mgi,smit,agt,
      1                  prob(np,np))
             check1(np) = check1(np) + df(np) * prob(np,np)              ! Normalization
-            pmin = prob(np,np)*limit
+            pmin = pmax*limit
             kk = point(np)+1
             indices(np,kk)=np
             point(np)=kk
-c
+c            if (pmin.le.1.d-307)then
+c            print *,pmin, prob(np,np)
+c            endif
 c           Integration to the left
             do jj = np-1, 1, -1
                kk=point(jj)+1
-               call probab(temp,wp(jj)/mec2,wp(np)/mec2,mgi,smit,agt,
-     1                     prob(jj,np))
-               if (prob(jj,np).ge.pmin)then                             ! Stop at pmin
+c               call probab(temp,wp(jj)/mec2,wp(np)/mec2,mgi,smit,agt,
+c     1                     prob(jj,np))
+               if ((prob(jj,np).ge.pmin).and.(prob(jj,np).gt.0.d0))then                             ! Stop at pmin
                    check1(np) = check1(np) + df(jj) * prob(jj,np)       ! Normalization
                    indices(jj,kk)=np
                    point(jj)=kk
@@ -115,9 +125,9 @@ c
 c           Integration to the right
             do jj = np+1, nmaxp
                kk=point(jj)+1
-               call probab(temp,wp(jj)/mec2,wp(np)/mec2,mgi,smit,agt,
-     1                     prob(jj,np))
-               if (prob(jj,np).ge.pmin)then                             ! Stop at pmin
+c               call probab(temp,wp(jj)/mec2,wp(np)/mec2,mgi,smit,agt,
+c     1                     prob(jj,np))
+               if ((prob(jj,np).ge.pmin).and.(prob(jj,np).gt.0.d0))then                             ! Stop at pmin
                    check1(np) = check1(np) + df(jj) * prob(jj,np)       ! Normalization
                    Indices(jj,kk)=np
                    point(jj)=kk
@@ -137,11 +147,14 @@ c           Integration to the right
             srf = prob(jj,np)*skn(np,iz)*df(np)/wp(np)/check1(np)
 !save the SRF array in order to pass it to the fits file routine   
             srf_arr(kk) = srf
+            ind_arr(kk) = np
          enddo
-            call add_row_HDU(n, nmaxp, point(jj), indices(jj,1),
+         print *,jj,kk
+            call add_row_HDU(n, nmaxp, point(jj),
      &        skn(jj,iz), srf_arr, unit)
+            call add_row_HDU_2(n, nmaxp, point(jj), ind_arr,unit)
             n = n + 1           ! increment the row number
-      enddo
+         enddo
                
 c
 1001  continue      

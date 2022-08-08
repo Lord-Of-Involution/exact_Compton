@@ -9,7 +9,7 @@ c-----------------------------------------------------------------------
       logical simple,extend
       integer bitpix,naxis,naxes(1)
 
-!Don't touch!
+!Dont touch!
 c Initialize status
       status=0
 c Delete the file if it already exists
@@ -196,11 +196,10 @@ c-----------------------------------------------------------------------
       
 
 c-----------------------------------------------------------------------
-      subroutine add_row_HDU(n, nmaxp, out_en_dim, out_en_ind,
+      subroutine add_row_HDU(n, nmaxp, out_en_dim,
      & kn_cross, srf, unit)
       implicit none
-      
-      integer          :: unit, n, nmaxp, out_en_dim, out_en_ind
+      integer          :: unit, n, nmaxp, out_en_dim
       double precision :: srf(nmaxp)
       double precision :: kn_cross(1)
       integer status,readwrite,hdutype, blocksize
@@ -224,11 +223,8 @@ C  Move to the last (3nd) HDU in the file (the paameter values table).
      &        kn_cross(1), status)
             colnum = 2
             call ftpcli(unit, colnum, rownum, 1, 1,
-     &       out_en_ind, status)
-            colnum = 3
-            call ftpcli(unit, colnum, rownum, 1, 1,
      &       out_en_dim, status)
-            colnum = 4
+            colnum = 3
 !Fill the column with arrays of different size
             call ftpcld(unit, colnum, rownum, 1, out_en_dim,
      &           srf, status)
@@ -246,7 +242,111 @@ c Check for any error, and if so print out error messages.
       end
 c-----------------------------------------------------------------------
 
+      subroutine add_HDU_2(temp_dim, en_dim, filename, unit)
+      implicit none
 
+      integer :: unit, temp_dim, en_dim,hdutype
+      character* (*) filename
+      
+!     Internal variables
+      integer status, blocksize, readwrite, tfields
+      character (len=16) extname
+      integer,parameter :: coldim = 2
+      character (LEN=16) ttype(coldim),tform(coldim),tunit(coldim)
+      integer i, nrows, varidat
+
+
+      ttype(1) = 'OUT_NUM'
+      ttype(2) = 'OUT_IND'
+      
+      tform(1) = '1I'
+      tform(2) = '1PI'
+
+
+      do i = 1, coldim
+         tunit(i) = ''
+      enddo
+
+c Initialize status
+      status=0
+      blocksize = 1
+c Get an unused Logical Unit Number to use to open the FITS file.
+      call ftgiou(unit,status)
+c Open the FITS file, with write access.
+      readwrite=1
+      call ftopen(unit,filename,readwrite,blocksize,status)      
+c Append/create a new empty HDU onto the end of the file and move to it.
+      call ftmahd(unit,3,hdutype,status)
+      call ftcrhd(unit,status)
+    
+c Define parameters for the binary table (see the above data statements)
+      tfields  = coldim
+      nrows    = temp_dim * en_dim
+      extname  = 'IND'
+      varidat  = 0
+c FTPHBN writes all the required header keywords which define the
+c structure of the binary table. NROWS and TFIELDS gives the number of
+c rows and columns in the table, and the TTYPE, TFORM, and TUNIT arrays
+c give the column name, format, and units, respectively of each column.
+      call ftphbn(unit,nrows,tfields,ttype,tform,tunit,
+     &     extname,varidat,status)
+
+
+c$$$c Write keywords to this extension
+c$$$!ftpkyj to write integer
+c$$$!ftpkye to write real (4)
+c$$$!ftpkyd to write real (8)       
+c$$$c The FITS file must always be closed before exiting the program. 
+c$$$c Any unit numbers allocated with FTGIOU must be freed with FTFIOU.
+c$$$      call ftclos(unit, status)
+c$$$      call ftfiou(unit, status)
+c Check for any error, and if so print out error messages.
+      if (status .gt. 0) then
+         call printerror(status)
+      endif
+      return
+      end
+
+      subroutine add_row_HDU_2(n, nmaxp, out_en_dim, out_en_ind,
+     & unit)
+      implicit none
+      
+      integer          :: unit, n, nmaxp, out_en_dim
+      integer :: out_en_ind(nmaxp)
+      integer status,readwrite,hdutype, blocksize
+      integer colnum,rownum
+      
+c Initialize status
+      status=0
+c$$$      blocksize = 1
+c$$$c Get an unused Logical Unit Number to use to open the FITS file.
+c$$$      call ftgiou(unit,status)
+c$$$c Open the FITS file, with write access.
+c$$$      readwrite=1
+c$$$      call ftopen(unit,filename,readwrite,blocksize,status)
+C  Move to the last (3nd) HDU in the file (the paameter values table).
+      call ftmahd(unit,4,hdutype,status)
+
+!     Filling the columns 
+            rownum = n
+            colnum = 1
+            call ftpcli(unit, colnum, rownum, 1, 1,
+     &        out_en_dim, status)
+            colnum = 2
+            call ftpcli(unit, colnum, rownum, 1, out_en_dim,
+     &       out_en_ind, status)
+
+c$$$cThe FITS file must always be closed before exiting the program. 
+c$$$c Any unit numbers allocated with FTGIOU must be freed with FTFIOU.
+c$$$      call ftclos(unit, status)
+c$$$      call ftfiou(unit, status)
+c Check for any error, and if so print out error messages.
+            if (status .gt. 0) then
+               call printerror(status)
+               write(*,*) 'adding row'
+            endif
+      return
+      end
 c-----------------------------------------------------------------------
       subroutine deletefile(filename,status)
 C  A simple little routine to delete a FITS file

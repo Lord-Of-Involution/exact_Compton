@@ -26,9 +26,8 @@
 #flags= -O3 -check bounds -fp-model source
 #
 fc=gfortran
-flags=-O3
-libs = -L/Users/gullo/Software/heasoft-6.28/x86_64-apple-darwin18.7.0/lib/ \
-       -lXSFunctions -lcfitsio -lXSModel -lXSUtil -lXS
+flags=-O3 -fallow-argument-mismatch
+libs= -L/home/jameson/lib/cfitsio-4.1.0/lib -lcfitsio
 
 #flags=-march=native -ffast-math -funroll-loops -O3 -finline-limit=600
 #flags= -O3 -fbounds-check 

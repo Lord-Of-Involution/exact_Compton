@@ -32,7 +32,7 @@ c
 c........    
       implicit none
       integer nmaxp, itrans, mgi, ii
-      parameter (nmaxp=500, itrans=70, mgi=3000)
+      parameter (nmaxp=500, itrans=70, mgi=8)
       double precision pemin, pemax, pemax2
       double precision theta(itrans), wp(nmaxp), df(nmaxp)
       double precision skn(nmaxp,itrans)
@@ -73,6 +73,11 @@ c
 c     Produce file with all SRF's
 c$$$      call super_Compton_RF(itrans, theta, nmaxp, wp, df, skn,
 c$$$     1     mgi, smit, agt)
+c      smit=(/-9.3056816d-1 ,-6.6999052d-1,-3.3000948d-1,-6.943184d-2,
+c     & 6.943184d-2, 3.3000948d-1, 6.6999052d-1, 9.3056816d-1 /)
+c      agt=(/1.7392742d-1, 3.2607258d-1, 3.2607258d-1, 1.7392742d-1,
+c     & 1.7392742d-1, 3.2607258d-1, 3.2607258d-1, 1.7392742d-1/) 
+c      print *, agt
       call super_Compton_RF_fits(itrans, theta, nmaxp, wp, df, skn,
      1     mgi, smit, agt)
       
